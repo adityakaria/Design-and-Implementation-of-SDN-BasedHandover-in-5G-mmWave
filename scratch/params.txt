@@ -1,0 +1,1 @@
+Node	Received Dups Lost	Hops	Rtmetric	ETX	Churn	Beacon-Interval(in ms)	Reboots	CPU-Power	LPM-Power	Listen-Power	Transmit-Power	Power 	On-Time(in ms)	Listen-Duty-Cycle	Transmit-Duty-Cycle	Avg-Inter-Packt-Time(in ms)	Min-Inter-Packt-Time(in ms)	Max-Inter-Packt-Time(in ms)
