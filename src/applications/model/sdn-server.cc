@@ -40,37 +40,40 @@ NS_LOG_COMPONENT_DEFINE ("sdnServer");
 
 NS_OBJECT_ENSURE_REGISTERED (sdnServer);
 
+
 TypeId
 sdnServer::GetTypeId (void)
 {
-  static TypeId tid =
-      TypeId ("ns3::sdnServer")
-          .SetParent<Application> ()
-          .SetGroupName ("Applications")
-          .AddConstructor<sdnServer> ()
-          .AddAttribute ("Port", "Port on which we listen for incoming packets.",
-                         UintegerValue (100), MakeUintegerAccessor (&sdnServer::m_port),
-                         MakeUintegerChecker<uint16_t> ())
-          .AddAttribute ("PacketWindowSize",
-                         "The size of the window used to compute the packet loss. This value "
-                         "should be a multiple of 8.",
-                         UintegerValue (32),
-                         MakeUintegerAccessor (&sdnServer::GetPacketWindowSize,
-                                               &sdnServer::SetPacketWindowSize),
-                         MakeUintegerChecker<uint16_t> (8, 256))
-          .AddTraceSource ("Rx", "A packet has been received",
-                           MakeTraceSourceAccessor (&sdnServer::m_rxTrace),
-                           "ns3::Packet::TracedCallback")
-          .AddTraceSource ("RxWithAddresses", "A packet has been received",
-                           MakeTraceSourceAccessor (&sdnServer::m_rxTraceWithAddresses),
-                           "ns3::Packet::TwoAddressTracedCallback");
+  static TypeId tid = TypeId ("ns3::sdnServer")
+    .SetParent<Application> ()
+    .SetGroupName("Applications")
+    .AddConstructor<sdnServer> ()
+    .AddAttribute ("Port",
+                   "Port on which we listen for incoming packets.",
+                   UintegerValue (100),
+                   MakeUintegerAccessor (&sdnServer::m_port),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("PacketWindowSize",
+                   "The size of the window used to compute the packet loss. This value should be a multiple of 8.",
+                   UintegerValue (32),
+                   MakeUintegerAccessor (&sdnServer::GetPacketWindowSize,
+                                         &sdnServer::SetPacketWindowSize),
+                   MakeUintegerChecker<uint16_t> (8,256))
+    .AddTraceSource ("Rx", "A packet has been received",
+                     MakeTraceSourceAccessor (&sdnServer::m_rxTrace),
+                     "ns3::Packet::TracedCallback")
+    .AddTraceSource ("RxWithAddresses", "A packet has been received",
+                     MakeTraceSourceAccessor (&sdnServer::m_rxTraceWithAddresses),
+                     "ns3::Packet::TwoAddressTracedCallback")
+  ;
   return tid;
 }
 
-sdnServer::sdnServer () : m_lossCounter (0)
+sdnServer::sdnServer ()
+  : m_lossCounter (0)
 {
   NS_LOG_FUNCTION (this);
-  m_received = 0;
+  m_received=0;
 }
 
 sdnServer::~sdnServer ()
@@ -118,11 +121,13 @@ sdnServer::StartApplication (void)
 {
   NS_LOG_FUNCTION (this);
 
+
   if (m_socket == 0)
     {
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
-      InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), m_port);
+      InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (),
+                                                   m_port);
       if (m_socket->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");
@@ -135,7 +140,8 @@ sdnServer::StartApplication (void)
     {
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket6 = Socket::CreateSocket (GetNode (), tid);
-      Inet6SocketAddress local = Inet6SocketAddress (Ipv6Address::GetAny (), m_port);
+      Inet6SocketAddress local = Inet6SocketAddress (Ipv6Address::GetAny (),
+                                                   m_port);
       if (m_socket6->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");
@@ -154,7 +160,7 @@ sdnServer::StopApplication ()
 
   if (m_socket != 0)
     {
-      m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket>> ());
+      m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
     }
 }
 
@@ -168,7 +174,7 @@ sdnServer::HandleRead (Ptr<Socket> socket)
   Address localAddress;
   while ((packet = socket->RecvFrom (from)))
     {
-      std::cout << packet->ToString () << "--\n";
+      std::cout << packet->ToString() << "--\n";
 
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
@@ -179,41 +185,101 @@ sdnServer::HandleRead (Ptr<Socket> socket)
           packet->RemoveHeader (seqTs);
 
           uint8_t *buffer = new uint8_t[packet->GetSize ()];
-          packet->CopyData (buffer, packet->GetSize ());
-          std::string s = std::string (buffer, buffer + packet->GetSize ());
-          std::cout << "Received:" << s << "\n";
+          packet->CopyData(buffer, packet->GetSize ());
+          std::string s = std::string(buffer, buffer+packet->GetSize());
+          
+          HoProcess(s);
 
           uint32_t currentSequenceNumber = seqTs.GetSeq ();
           if (InetSocketAddress::IsMatchingType (from))
             {
-              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () << " bytes from "
-                                             << InetSocketAddress::ConvertFrom (from).GetIpv4 ()
-                                             << " Sequence Number: " << currentSequenceNumber
-                                             << " Uid: " << packet->GetUid () << " TXtime: "
-                                             << seqTs.GetTs () << " RXtime: " << Simulator::Now ()
-                                             << " Delay: " << Simulator::Now () - seqTs.GetTs ());
+              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () <<
+                           " bytes from "<< InetSocketAddress::ConvertFrom (from).GetIpv4 () <<
+                           " Sequence Number: " << currentSequenceNumber <<
+                           " Uid: " << packet->GetUid () <<
+                           " TXtime: " << seqTs.GetTs () <<
+                           " RXtime: " << Simulator::Now () <<
+                           " Delay: " << Simulator::Now () - seqTs.GetTs ());
             }
           else if (Inet6SocketAddress::IsMatchingType (from))
             {
-              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () << " bytes from "
-                                             << Inet6SocketAddress::ConvertFrom (from).GetIpv6 ()
-                                             << " Sequence Number: " << currentSequenceNumber
-                                             << " Uid: " << packet->GetUid () << " TXtime: "
-                                             << seqTs.GetTs () << " RXtime: " << Simulator::Now ()
-                                             << " Delay: " << Simulator::Now () - seqTs.GetTs ());
+              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () <<
+                           " bytes from "<< Inet6SocketAddress::ConvertFrom (from).GetIpv6 () <<
+                           " Sequence Number: " << currentSequenceNumber <<
+                           " Uid: " << packet->GetUid () <<
+                           " TXtime: " << seqTs.GetTs () <<
+                           " RXtime: " << Simulator::Now () <<
+                           " Delay: " << Simulator::Now () - seqTs.GetTs ());
             }
 
           m_lossCounter.NotifyReceived (currentSequenceNumber);
           m_received++;
         }
     }
-  // std::string name = "Got the packet from UE";
-  std::string name = "1|1|0|0"; // ho_flag|t_enb_no|ue_rnti_no|s_enb_no
-  char data[name.length () + 1];
-  std::strcpy (data, name.c_str ());
-  m_hoClients[0]->SendData (data, name.length () + 1);
+    //handover dec | source cell ID | ue rnti | trg cell id
+  // std::string name= "0|0|1|2";
+  // char data[ name.length() ];
+  // std::strcpy(data,name.c_str());
+  // m_hoClients[0]->SendData(data , name.length()+1);
 
-  std::cout << "Addr ::" << from << "\n";
+    std::cout << "Addr ::" << from << "\n";
+
+}
+
+void 
+sdnServer::HoProcess( std::string params ){
+std::cout<<"Received --->  "<< params << "\n";
+
+    const char* delim = "|";
+    std::vector<std::string> out;
+    tokenize(params, delim, out);
+
+    for( int i=2;i< (signed)out.size()-1;i+=2 ){
+      sinrTable[{ stoi(out[0]) , stoi(out[1]) }][stoi(out[i])] = stoi(out[i+1]);
+      std:: cout << stoi(out[0]) << " " << stoi(out[1]) << " " << stoi(out[i]) << " " << stod(out[i+1]) << "\n";
+    }
+
+    // Algo 1
+    // for( auto itr : sinrTable[{ stoi(out[0]) , stoi(out[1]) }] ){
+    //   if( stoi(out[0]) != (signed)itr.first ){
+    //     if(  sinrTable[{ stoi(out[0]) , stoi(out[1]) }][stoi(out[0])] <  itr.second  ){
+    //       std::cout <<"---------- Handover Init -----------" << "\n";
+    //       std::string name= "1|" + out[0] + "|" + out[1] + "|" + std::to_string(itr.first);
+    //       std::cout << name << "\n";
+    //       char data[ name.length() ];
+    //       std::strcpy(data,name.c_str());
+    //       m_hoClients[ stoi(out.back()) ]->SendData(data , name.length()+1);
+    //     }
+    //   }
+    // }
+
+    
+    for( auto itr : sinrTable[{ stoi(out[0]) , stoi(out[1]) }] ){
+      if( stoi(out[0]) != (signed)itr.first ){
+        if(  sinrTable[{ stoi(out[0]) , stoi(out[1]) }][stoi(out[0])] <  itr.second  ){
+          std::cout <<"---------- Handover Init -----------" << "\n";
+          std::string name= "1|" + out[0] + "|" + out[1] + "|" + std::to_string(itr.first);
+          std::cout << name << "\n";
+          char data[ name.length() ];
+          std::strcpy(data,name.c_str());
+          m_hoClients[ stoi(out.back()) ]->SendData(data , name.length()+1);
+        }
+      }
+    }
+
+
+}
+
+void 
+sdnServer::tokenize(std::string const &str, const char* delim,
+            std::vector<std::string> &out)
+{
+    char *token = strtok(const_cast<char*>(str.c_str()), delim);
+    while (token != nullptr)
+    {
+        out.push_back(std::string(token));
+        token = strtok(nullptr, delim);
+    }
 }
 
 } // Namespace ns3

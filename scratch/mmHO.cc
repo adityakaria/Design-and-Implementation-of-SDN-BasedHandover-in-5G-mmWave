@@ -122,6 +122,18 @@ NotifyHandoverEndOkEnb (std::string context,
             << std::endl;
 }
 
+void PhySnirTrace2 (std::string context ,uint16_t cellId, uint16_t rnti, double rsrp, double sinr, uint8_t componentCarrierId)
+{ 
+  std::cout << rsrp << "\n";
+}
+
+void printParams(std::string context,uint64_t imsi , SpectrumValue& sinr , SpectrumValue& sinr2){
+  std::cout << "curr cell :: " << imsi << " | " << sinr << "\n";
+}
+
+void printParams2(std::string context,uint64_t currCell, uint16_t rnti,uint16_t cellId, double sinr){
+  std::cout << "Curr Cell:: " <<  currCell << " RNTI :: " << rnti << " Cell :: " << cellId  << " " << "SINR :: " << sinr << "\n";
+}
 
 /**
  * Sample simulation script for an automatic X2-based handover based on the RSRQ measures.
@@ -155,7 +167,7 @@ main (int argc, char *argv[])
   double yForUe = 1000.0;   // m
   double speed = 500;       // m/s
   double simTime = (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
-  double enbTxPowerDbm = 46.0;
+  double enbTxPowerDbm = 5.0;
 
   // change some default attributes so that they are reasonable for
   // this scenario, but do this before processing command line
@@ -163,6 +175,8 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds (10)));
   Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
   Config::SetDefault ("ns3::MmWaveHelper::UseIdealRrc", BooleanValue (false));
+
+  // Config::SetDefault("ns3::MmWaveUePhy::ReportCurrentCellRsrpSinr" , &printParams );
 
   // Config::SetDefault ("ns3::MmWavePhyMacCommon::ResourceBlockNum", UintegerValue (1));
   // Config::SetDefault ("ns3::MmWavePhyMacCommon::ChunkPerRB", UintegerValue (72));
@@ -424,12 +438,40 @@ main (int argc, char *argv[])
                    MakeCallback (&NotifyHandoverEndOkEnb));
   Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
                    MakeCallback (&NotifyHandoverEndOkUe));
+  // Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
+  //                  MakeCallback (&NotifyHandoverEndOkUe));
+  // Config::Connect ("/NodeList/*/DeviceList/*/MmWaveUePhy/ReportCurrentCellRsrpSinr",
+  //                       MakeCallback (&printParams));
+
+  // Config::Connect ("/NodeList/*/DeviceList/*/MmWaveUePhy/ReportAllCellRsrpSinr",
+  //                       MakeCallback (&printParams2));
+  // AsciiTraceHelper asciiTraceHelper;
+  // Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("ueTest.txt");
+  // Config::Connect ("/NodeList/*/DeviceList/*/$ns3::MmWaveUeNetDevice/ComponentCarrierMapUe/*/MmWaveUePhy/ReportCurrentCellRsrpSinr",
+  // MakeBoundCallback (&ReportUeMeasurementsCallbackDetail,stream));
+  // Config::Connect ("/NodeList/*/DeviceList/*/$ns3::MmWaveUeNetDevice/ComponentCarrierMapUe/*/MmWaveUePhy/ReportCurrentCellRsrpSinr", MakeCallback (&printParams));
+  Config::Connect ("/NodeList/*/DeviceList/*/$ns3::MmWaveUeNetDevice/ComponentCarrierMapUe/*/MmWaveUePhy/ReportAllCellRsrpSinr", MakeCallback (&printParams2));
 
 
-  Simulator::Stop (Seconds (2));
 
-  AnimationInterface anim("mmHo.xml");
 
+  Simulator::Stop (Seconds (5));
+
+  // AnimationInterface anim("mmHo.xml");
+
+  // std::cout<<"\n";
+  // std::cout<<"\n";
+  // std::cout<<"    SINR values of Shard 2  \n";
+  // std::cout<<"\n";
+   // mmwaveHelper->EnableSidelinkTraces ();
+// Config::Connect ("/NodeList/*/DeviceList/*/$ns3::MmWaveUeNetDevice/ComponentCarrierMapUe/*/MmWaveUePhy/ReportCurrentCellRsrpSinr", MakeCallback (&printParams));
+  
+// AsciiTraceHelper asciiTraceHelper;
+  // Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("ueTest.txt");
+  // Config::Connect ("/NodeList/*/DeviceList/*/$ns3::MmWaveUeNetDevice/ComponentCarrierMapUe/*/MmWaveUePhy/ReportCurrentCellRsrpSinr",MakeBoundCallback (&ReportUeMeasurementsCallbackDetail,stream));
+ 
+
+// Config::Connect ("/NodeList/*/DeviceList/*/MmWaveUePhy/ReportCurrentCellRsrpSinr",MakeCallback (&printParams));
 
   Simulator::Run ();
 

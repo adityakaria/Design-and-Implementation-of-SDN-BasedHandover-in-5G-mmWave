@@ -105,6 +105,10 @@ MmWaveUePhy::GetTypeId (void)
 						 "RSRP and SINR statistics.",
 						 MakeTraceSourceAccessor (&MmWaveUePhy::m_reportCurrentCellRsrpSinrTrace),
 						 "ns3::CurrentCellRsrpSinr::TracedCallback")
+		.AddTraceSource ("ReportAllCellRsrpSinr",
+						 "RSRP and SINR statistics.",
+						 MakeTraceSourceAccessor (&MmWaveUePhy::m_reportAllCellRsrpSinrTrace),
+						 "ns3::AllCellRsrpSinr::TracedCallback")
 		.AddTraceSource ("ReportUplinkTbSize",
 						 "Report allocated uplink TB size for trace.",
 						 MakeTraceSourceAccessor (&MmWaveUePhy::m_reportUlTbSize),
@@ -245,6 +249,7 @@ void
 MmWaveUePhy::UpdateSinrEstimate(uint16_t cellId, double sinr)
 {
 	NS_LOG_FUNCTION(this);
+	// std::cout << cellId <<  " " << sinr << "\n";
 	if(m_cellSinrMap.find(cellId) != m_cellSinrMap.end())
 	{
 		m_cellSinrMap.find(cellId)->second = sinr;
@@ -254,9 +259,36 @@ MmWaveUePhy::UpdateSinrEstimate(uint16_t cellId, double sinr)
 		m_cellSinrMap.insert(std::pair<uint16_t, double> (cellId, sinr));
 	}
 
+	avgLen=15;
+
+	avgSinrs[cellId].push(sinr);
+	frqAvg[cellId].first+=1;
+	frqAvg[cellId].second+=sinr;
+
+	if( avgSinrs[cellId].size() == (unsigned)avgLen+1 ){
+		frqAvg[cellId].second-=avgSinrs[cellId].front();
+		avgSinrs[cellId].pop();
+	}
+
+	// std::cout << "SIZE :: " << avgSinrs[cellId].size() << "\n";
+		// std::cout << sinr << "\n";
+
+	if(frqAvg[cellId].first%avgLen==0){
+		frqAvg[cellId].first=0;
+		//callback
+		m_reportAllCellRsrpSinrTrace(m_cellId,m_rnti,cellId, 10*std::log10( frqAvg[cellId].second/avgSinrs[cellId].size()));
+		// std::cout << avgLen << " " << avgSinrs.size() << "\n";
+		// m_reportAllCellRsrpSinrTrace(m_cellId,m_rnti,cellId,frqAvg[cellId].second/avgSinrs[cellId].size() );
+
+	}
+
+
+	// m_reportAllCellRsrpSinrTrace(m_cellId,m_rnti,cellId,sinr);
+
 	if(cellId == m_cellId) // update for SNR of the current cell
 	{
 		long double currentCellSinr = 10*std::log10(m_cellSinrMap.find(m_cellId)->second);
+		// std::cout << cellId << "| " << currentCellSinr << "\n";
 		if(currentCellSinr < m_outageThreshold)
 		{
 			m_consecutiveSinrBelowThreshold++;
@@ -272,6 +304,24 @@ MmWaveUePhy::UpdateSinrEstimate(uint16_t cellId, double sinr)
 		}
 		NS_LOG_DEBUG("Phy layers: update sinr value for cell " << m_cellId << " to " << currentCellSinr << " m_consecutiveSinrBelowThreshold " << (uint16_t)m_consecutiveSinrBelowThreshold << " at time " << Simulator::Now());
 	}
+}
+
+std::string
+MmWaveUePhy::GetParams(){
+	std::string params = "";
+	params+= std::to_string( m_cellId );
+	params+= "|";
+	params+= std::to_string( m_rnti );
+	params+= "|";
+
+	for(auto itr : frqAvg ){
+		params += std::to_string( itr.first );
+		params += "|";
+		params += std::to_string( 10*std::log10(itr.second.second/avgSinrs[itr.first].size()) );
+		params += "|";
+	}
+
+	return params;
 }
 
 std::vector <int>
@@ -934,6 +984,7 @@ MmWaveUePhy::GenerateDlCqiReport (const SpectrumValue& sinr)
 			{
 				DoSendControlMessage (msg);
 			}
+			// std::cout << m_imsi << " :: " << sinr << "\n";
 			m_reportCurrentCellRsrpSinrTrace (m_imsi, newSinr, newSinr);
 		}
 	}

@@ -28,20 +28,13 @@
 #include "ns3/ptr.h"
 #include "ns3/address.h"
 #include "ns3/traced-callback.h"
-#include "ns3/net-device-container.h"
 #include "packet-loss-counter.h"
+#include "ns3/lte-enb-rrc.h"
 #include "ns3/mmwave-helper.h"
 #include "ns3/mmwave-net-device.h"
 #include "ns3/mmwave-enb-net-device.h"
-#include "ns3/mmwave-ue-net-device.h"
 
 namespace ns3 {
-
-extern int ho_flag;
-extern int t_enb_no;
-extern int ue_no;
-extern int s_enb_no;
-
 /**
  * \ingroup applications
  * \defgroup hoclientserver hoClientServer
@@ -59,14 +52,6 @@ extern int s_enb_no;
 class hoServer : public Application
 {
 public:
-  // NetDeviceContainer enbDevs;
-  // NetDeviceContainer ueDevs;
-  // std::vector<Ptr<mmwave::MmWaveEnbNetDevice>> enbNetDeviceContainer;
-  // std::vector<Ptr<mmwave::MmWaveUeNetDevice>> ueNetDeviceContainer;
-
-  std::vector<Ptr<LteEnbRrc>> enbRrcs;
-  void setDevs (std::vector<Ptr<LteEnbRrc>> enbRrcs1);
-
   /**
    * \brief Get the type ID.
    * \return the object TypeId
@@ -79,6 +64,11 @@ public:
    * \return the number of lost packets
    */
   uint32_t GetLost (void) const;
+
+  Ptr<NetDevice> sourceEnbDev;
+  std::vector< Ptr<NetDevice>  > enbDevsVect;
+
+  // Ptr<ns3::mmwave::LteEnbRrc> src = CreateObject<ns3::mmwave::LteEnbRrc> ();
 
   /**
    * \brief Returns the number of received packets
@@ -100,14 +90,15 @@ public:
    */
   void SetPacketWindowSize (uint16_t size);
 
+  void tokenize(std::string const &str, const char* delim, std::vector<std::string> &out);
 protected:
   virtual void DoDispose (void);
 
 private:
+
   virtual void StartApplication (void);
   virtual void StopApplication (void);
-  void PerformHandover (int t_enb_no, int ue_no, int s_enb_no);
-  std::vector<std::string> splitData (const std::string &s, char delim);
+
   /**
    * \brief Handle a packet reception.
    *
@@ -124,10 +115,11 @@ private:
   PacketLossCounter m_lossCounter; //!< Lost packet counter
 
   /// Callbacks for tracing the packet Rx events
-  TracedCallback<Ptr<const Packet>> m_rxTrace;
+  TracedCallback<Ptr<const Packet> > m_rxTrace;
 
   /// Callbacks for tracing the packet Rx events, includes source and destination addresses
   TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_rxTraceWithAddresses;
+
 };
 
 } // namespace ns3
