@@ -124,7 +124,7 @@ PerformHandover (Ptr<NetDevice> targetEnbDev, Ptr<NetDevice> ueDev, Ptr<NetDevic
   uint16_t targetCellId = targetEnbDev->GetObject<MmWaveEnbNetDevice> ()->GetCellId ();
   Ptr<LteEnbRrc> sourceRrc = sourceEnbDev->GetObject<MmWaveEnbNetDevice> ()->GetRrc ();
   uint16_t rnti = ueDev->GetObject<MmWaveUeNetDevice> ()->GetRrc ()->GetRnti ();
-  std ::cout << rnti << " ++++++++++++++++++++++ " << targetCellId << "\n";
+  // std ::cout << rnti << " ++++++++++++++++++++++ " << targetCellId << "\n";
 
   sourceRrc->SendHandoverRequest (rnti, targetCellId);
 }
@@ -160,14 +160,16 @@ NotifyHandoverEndOkEnb (std::string context, uint64_t imsi, uint16_t cellid, uin
 void
 check (Ptr<sdnClient> ch)
 {
-  std::cout << "Called....1"
+  std::cout << "--------------------------------\n"
+            << "Called handover check"
             << "\n";
 
-  std::string name = "dhruvik123sksksk";
+  std::string name = "127|4.17";
+  std::cout << "Data Sent (UE->Controller): " << name << std::endl;
   // std::string name = "60";
   char data[name.length ()];
   std::strcpy (data, name.c_str ());
-  ch->SendData (data, 17);
+  ch->SendData (data, 9);
   // ch->SendData (data, 2);
   // int rn = (int) rand () % 50;
   // std::cout << "random value: " << rn << std::endl;
@@ -180,7 +182,8 @@ check (Ptr<sdnClient> ch)
   //     dn = 0;
   //   }
 
-  std::cout << "Called....2"
+  std::cout << "end of handover check request"
+            << "\n--------------------------------"
             << "\n";
 
   return;
@@ -429,9 +432,9 @@ main (int argc, char *argv[])
           serverApps.Add (dlServerHelper.Install (ue));
 
           hoClients.push_back (dlClientHelper.m_clients[0]);
-          hoServers.push_back (dlServerHelper.m_servers[0]);
+          // hoServers.push_back (dlServerHelper.m_servers[0]);
 
-          dlServerHelper.m_servers[0]->setDevs (enbRrcs);
+          // dlServerHelper.m_servers[0]->setDevs (enbRrcs);
 
           // if(u==0){
           //   Simulator::Schedule (Seconds(0.1), &check, dlClientHelper2);
