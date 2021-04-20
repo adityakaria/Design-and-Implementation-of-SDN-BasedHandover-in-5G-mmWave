@@ -29,8 +29,8 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
-#include "ns3/mmwave-helper.h"
 #include "packet-loss-counter.h"
+#include "ns3/mmwave-point-to-point-epc-helper.h"
 
 #include "seq-ts-header.h"
 #include "ho-server.h"
@@ -41,37 +41,40 @@ NS_LOG_COMPONENT_DEFINE ("hoServer");
 
 NS_OBJECT_ENSURE_REGISTERED (hoServer);
 
+
 TypeId
 hoServer::GetTypeId (void)
 {
-  static TypeId tid =
-      TypeId ("ns3::hoServer")
-          .SetParent<Application> ()
-          .SetGroupName ("Applications")
-          .AddConstructor<hoServer> ()
-          .AddAttribute ("Port", "Port on which we listen for incoming packets.",
-                         UintegerValue (100), MakeUintegerAccessor (&hoServer::m_port),
-                         MakeUintegerChecker<uint16_t> ())
-          .AddAttribute (
-              "PacketWindowSize",
-              "The size of the window used to compute the packet loss. This value should be a "
-              "multiple of 8.",
-              UintegerValue (32),
-              MakeUintegerAccessor (&hoServer::GetPacketWindowSize, &hoServer::SetPacketWindowSize),
-              MakeUintegerChecker<uint16_t> (8, 256))
-          .AddTraceSource ("Rx", "A packet has been received",
-                           MakeTraceSourceAccessor (&hoServer::m_rxTrace),
-                           "ns3::Packet::TracedCallback")
-          .AddTraceSource ("RxWithAddresses", "A packet has been received",
-                           MakeTraceSourceAccessor (&hoServer::m_rxTraceWithAddresses),
-                           "ns3::Packet::TwoAddressTracedCallback");
+  static TypeId tid = TypeId ("ns3::hoServer")
+    .SetParent<Application> ()
+    .SetGroupName("Applications")
+    .AddConstructor<hoServer> ()
+    .AddAttribute ("Port",
+                   "Port on which we listen for incoming packets.",
+                   UintegerValue (100),
+                   MakeUintegerAccessor (&hoServer::m_port),
+                   MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("PacketWindowSize",
+                   "The size of the window used to compute the packet loss. This value should be a multiple of 8.",
+                   UintegerValue (32),
+                   MakeUintegerAccessor (&hoServer::GetPacketWindowSize,
+                                         &hoServer::SetPacketWindowSize),
+                   MakeUintegerChecker<uint16_t> (8,256))
+    .AddTraceSource ("Rx", "A packet has been received",
+                     MakeTraceSourceAccessor (&hoServer::m_rxTrace),
+                     "ns3::Packet::TracedCallback")
+    .AddTraceSource ("RxWithAddresses", "A packet has been received",
+                     MakeTraceSourceAccessor (&hoServer::m_rxTraceWithAddresses),
+                     "ns3::Packet::TwoAddressTracedCallback")
+  ;
   return tid;
 }
 
-hoServer::hoServer () : m_lossCounter (0)
+hoServer::hoServer ()
+  : m_lossCounter (0)
 {
   NS_LOG_FUNCTION (this);
-  m_received = 0;
+  m_received=0;
 }
 
 hoServer::~hoServer ()
@@ -90,6 +93,7 @@ void
 hoServer::SetPacketWindowSize (uint16_t size)
 {
   NS_LOG_FUNCTION (this << size);
+  // *src->SendHandoverRequest (1, 1);
   m_lossCounter.SetBitMapSize (size);
 }
 
@@ -119,11 +123,13 @@ hoServer::StartApplication (void)
 {
   NS_LOG_FUNCTION (this);
 
+
   if (m_socket == 0)
     {
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket = Socket::CreateSocket (GetNode (), tid);
-      InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), m_port);
+      InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (),
+                                                   m_port);
       if (m_socket->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");
@@ -136,7 +142,8 @@ hoServer::StartApplication (void)
     {
       TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
       m_socket6 = Socket::CreateSocket (GetNode (), tid);
-      Inet6SocketAddress local = Inet6SocketAddress (Ipv6Address::GetAny (), m_port);
+      Inet6SocketAddress local = Inet6SocketAddress (Ipv6Address::GetAny (),
+                                                   m_port);
       if (m_socket6->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");
@@ -155,60 +162,36 @@ hoServer::StopApplication ()
 
   if (m_socket != 0)
     {
-      m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket>> ());
+      m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
     }
 }
 
-void
-hoServer::setDevs (std::vector<Ptr<LteEnbRrc>> enbRrcs1)
+void 
+hoServer::tokenize(std::string const &str, const char* delim,
+            std::vector<std::string> &out)
 {
-  // enbDevs = enbDevs1;
-  // ueDevs = ueDevs1;
-  enbRrcs = enbRrcs1;
-  std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>" << enbRrcs[0] << std::endl;
-}
-
-std::vector<std::string>
-hoServer::splitData (const std::string &s, char delim)
-{
-  std::vector<std::string> result;
-  std::stringstream ss (s);
-  std::string item;
-
-  while (getline (ss, item, delim))
+    char *token = strtok(const_cast<char*>(str.c_str()), delim);
+    while (token != nullptr)
     {
-      result.push_back (item);
+        out.push_back(std::string(token));
+        token = strtok(nullptr, delim);
     }
-
-  return result;
-}
-
-void
-hoServer::PerformHandover (int t_enb_no, int ue_no, int s_enb_no)
-{
-
-  std::cout << "Handover is called...."
-            << "\n";
-  // uint16_t targetCellId = targetEnbDev->GetObject<mmwave::MmWaveEnbNetDevice> ()->GetCellId ();
-  // Ptr<LteEnbRrc> sourceRrc = sourceEnbDev->GetObject<mmwave::MmWaveEnbNetDevice> ()->GetRrc ();
-  // uint16_t rnti = ueDev->GetObject<mmwave::MmWaveUeNetDevice> ()->GetRrc ()->GetRnti ();
-  std ::cout << ">>>>>>>>>> Handover Params from controller: " << t_enb_no << ", " << ue_no << ", "
-             << s_enb_no << "\n";
-  // enbRrcs[s_enb_no]->SendHandoverRequest (ue_no, t_enb_no);
 }
 
 void
 hoServer::HandleRead (Ptr<Socket> socket)
 {
-  std::cout << "Something got..." << socket << "\n";
+  std::cout << "ho server :: Something got..." << socket << "\n";
   NS_LOG_FUNCTION (this << socket);
+
+  
+
   Ptr<Packet> packet;
   Address from;
   Address localAddress;
-
   while ((packet = socket->RecvFrom (from)))
     {
-      std::cout << packet->ToString () << "--\n";
+      std::cout << packet->ToString() << "--\n";
 
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
@@ -219,45 +202,54 @@ hoServer::HandleRead (Ptr<Socket> socket)
           packet->RemoveHeader (seqTs);
 
           uint8_t *buffer = new uint8_t[packet->GetSize ()];
-          packet->CopyData (buffer, packet->GetSize ());
-          std::string s = std::string (buffer, buffer + packet->GetSize ());
-          std::cout << "Received:" << s << "\n";
+          packet->CopyData(buffer, packet->GetSize ());
+          std::string s = std::string(buffer, buffer+packet->GetSize());
+          std::cout<<"Received:"<<s<< "\n";
 
-          std::vector<std::string> v = splitData (s, '|');
+          const char* delim = "|";
+ 
+    std::vector<std::string> out;
+    tokenize(s, delim, out);
+    std::vector<int> params;
+    for (auto &s: out) {
+        // std::cout << s << '\n';
+      params.push_back( stoi(s) );
+    }
 
-          int ho_flag = stoi (v[0]);
-          int t_enb_no = stoi (v[1]);
-          int ue_no = stoi (v[2]);
-          int s_enb_no = stoi (v[3]);
+    std::cout << "---------------------------------------------------------- 11111" <<"\n";
 
-          std::cout << ho_flag << ", " << t_enb_no << ", " << ue_no << ", " << s_enb_no
-                    << "+++++++++++++++++++++++++++" << std::endl;
+  std::cout << sourceEnbDev << "\n";
+  // sourceEnbDev->GetObject<mmwave::MmWaveEnbNetDevice> ()->GetRrc ()->SendHandoverRequest (params[2],params[3]);
+  if( params[0]==1 ){
+    //Uncomment this line after building the project
+    enbDevsVect[ params[1]-1 ]->GetObject<mmwave::MmWaveEnbNetDevice> ()->GetRrc ()->SendHandoverRequest (params[2],params[3]);
+  }
 
-          // std::cout << enbDevs.Get (0)->GetObject<MmWaveEnbNetDevice> ()->GetCellId () << std::endl;
 
-          if (ho_flag == 1)
-            PerformHandover (t_enb_no, ue_no, s_enb_no);
-          else
-            std::cout << "++++++++++++ HANDOVER DENIED ++++++++++++" << std::endl;
+  std::cout << "---------------------------------------------------------- 22222" << "\n";
+
+
 
           uint32_t currentSequenceNumber = seqTs.GetSeq ();
           if (InetSocketAddress::IsMatchingType (from))
             {
-              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () << " bytes from "
-                                             << InetSocketAddress::ConvertFrom (from).GetIpv4 ()
-                                             << " Sequence Number: " << currentSequenceNumber
-                                             << " Uid: " << packet->GetUid () << " TXtime: "
-                                             << seqTs.GetTs () << " RXtime: " << Simulator::Now ()
-                                             << " Delay: " << Simulator::Now () - seqTs.GetTs ());
+              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () <<
+                           " bytes from "<< InetSocketAddress::ConvertFrom (from).GetIpv4 () <<
+                           " Sequence Number: " << currentSequenceNumber <<
+                           " Uid: " << packet->GetUid () <<
+                           " TXtime: " << seqTs.GetTs () <<
+                           " RXtime: " << Simulator::Now () <<
+                           " Delay: " << Simulator::Now () - seqTs.GetTs ());
             }
           else if (Inet6SocketAddress::IsMatchingType (from))
             {
-              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () << " bytes from "
-                                             << Inet6SocketAddress::ConvertFrom (from).GetIpv6 ()
-                                             << " Sequence Number: " << currentSequenceNumber
-                                             << " Uid: " << packet->GetUid () << " TXtime: "
-                                             << seqTs.GetTs () << " RXtime: " << Simulator::Now ()
-                                             << " Delay: " << Simulator::Now () - seqTs.GetTs ());
+              NS_LOG_INFO ("TraceDelay: RX " << packet->GetSize () <<
+                           " bytes from "<< Inet6SocketAddress::ConvertFrom (from).GetIpv6 () <<
+                           " Sequence Number: " << currentSequenceNumber <<
+                           " Uid: " << packet->GetUid () <<
+                           " TXtime: " << seqTs.GetTs () <<
+                           " RXtime: " << Simulator::Now () <<
+                           " Delay: " << Simulator::Now () - seqTs.GetTs ());
             }
 
           m_lossCounter.NotifyReceived (currentSequenceNumber);
@@ -265,7 +257,8 @@ hoServer::HandleRead (Ptr<Socket> socket)
         }
     }
 
-  std::cout << "Addr ::" << from << "\n";
+    std::cout << "Addr ::" << from << "\n";
+
 }
 
 } // Namespace ns3

@@ -43,6 +43,7 @@
 #include <ns3/lte-ue-cphy-sap.h>
 #include <ns3/mmwave-harq-phy.h>
 #include "mmwave-enb-net-device.h"
+#include <queue>
 
 
 
@@ -138,6 +139,12 @@ public:
 
 	void UpdateSinrEstimate(uint16_t cellId, double sinr);
 
+	uint16_t avgLen=20;
+	std::map< uint16_t , std::queue<double> > avgSinrs;
+	std::map< uint16_t , std::pair<int,double> > frqAvg;
+	std::string allParams;
+	std::string GetParams();
+
 
 private:
 	void DoReset ();
@@ -187,6 +194,7 @@ private:
 	bool m_ulConfigured;
 
 	TracedCallback< uint64_t, SpectrumValue&, SpectrumValue& > m_reportCurrentCellRsrpSinrTrace;
+	TracedCallback< uint64_t, uint16_t, uint16_t, double > m_reportAllCellRsrpSinrTrace;
 
 	TracedCallback<uint64_t, uint64_t> m_reportUlTbSize;
 	TracedCallback<uint64_t, uint64_t> m_reportDlTbSize;

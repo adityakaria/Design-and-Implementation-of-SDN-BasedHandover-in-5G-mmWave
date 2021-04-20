@@ -84,6 +84,12 @@ public:
 
   std::vector< Ptr<hoClient> > m_hoClients;
 
+  std::map< std::pair<uint64_t,uint16_t> , std::map< uint64_t , double > > sinrTable;
+
+  void HoProcess( std::string params  );
+
+  void tokenize(std::string const &str, const char* delim,std::vector<std::string> &out);
+
 protected:
   virtual void DoDispose (void);
 
